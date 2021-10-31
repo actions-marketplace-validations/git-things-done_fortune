@@ -1,0 +1,38 @@
+name: “Fortune” for Git Things Done
+description: Adds a fortune to your “Git Things Done” entry
+inputs:
+  today:
+    description: >
+      The current GitTD issue number.
+      If unset we use `$GTD_TODAY`.
+    required: false
+  token:
+    description: Typically (eg. {{ secrets.GITHUB_TOKEN }}).
+    default: ${{ github.token }}
+outputs:
+  fortune:
+    description: The fortune added to the journal entry
+    value: ${{ steps.fortune.outputs.value }}
+runs:
+  using: composite
+  steps:
+    - run: |
+        set -euo pipefail
+        FORTUNE=$(curl http://yerkee.com/api/fortune -s | jq -r .fortune)
+        gh issue comment "$TODAY" --body-file - <<EOD
+        # Fortune
+        $FORTUNE
+        EOD
+        FORTUNE="${FORTUNE//'%'/'%25'}"
+        FORTUNE="${FORTUNE//$'\n'/'%0A'}"
+        FORTUNE="${FORTUNE//$'\r'/'%0D'}"
+        echo "::set-output name=value::$FORTUNE"
+      shell: bash
+      id: fortune
+      env:
+        TODAY: ${{ inputs.today || env.GTD_TODAY }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+
+branding:
+  icon: check-square
+  color: green
